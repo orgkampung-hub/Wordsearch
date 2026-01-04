@@ -124,16 +124,21 @@ function drawTrace(){
 
 function clearSelection(){
   for(let cell of selectedCells) cell.classList.remove('selected');
-  selectedCells=[]; ctx.clearRect(0,0,canvas.width,canvas.height);
+  selectedCells=[];
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 }
 
 confirmBtn.addEventListener('click', ()=>{
   if(selectedCells.length<2) return;
+
+  // Pool = selected + found letters (reuse allowed)
   let selectedCoords = selectedCells.map(c=>c.dataset.row+','+c.dataset.col);
+  let foundCoords = cellElements.filter(c=>c.classList.contains('found')).map(c=>c.dataset.row+','+c.dataset.col);
+  let poolCoords = [...new Set([...selectedCoords, ...foundCoords])];
 
   for(let pw of placedWords){
     let wordCoords = pw.coords.map(a=>a.join(','));
-    if(wordCoords.every(c=>selectedCoords.includes(c))){
+    if(wordCoords.every(c=>poolCoords.includes(c))){
       for(let cell of selectedCells){
         if(wordCoords.includes(cell.dataset.row+','+cell.dataset.col)){
           cell.classList.remove('selected');
@@ -144,6 +149,7 @@ confirmBtn.addEventListener('click', ()=>{
       if(wEl) wEl.classList.add('found');
     }
   }
+
   clearSelection();
 });
 
