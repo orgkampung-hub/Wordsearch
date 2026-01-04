@@ -28,6 +28,7 @@ let wordList = [];
 let grid = [];
 let selectedCells = [];
 let cellElements = [];
+let placedWords = [];
 const gridSize = 13;
 const numWords = 15;
 const gridDiv = document.getElementById('grid');
@@ -46,6 +47,7 @@ function generateGrid(){
   grid = Array(gridSize).fill(0).map(()=> Array(gridSize).fill(''));
   selectedCells=[];
   cellElements=[];
+  placedWords=[];
   gridDiv.innerHTML='';
   wordDiv.innerHTML='';
   ctx.clearRect(0,0,canvas.width,canvas.height);
@@ -69,11 +71,14 @@ function generateGrid(){
         else if(grid[r][c]!='' && grid[r][c]!=word[i]) canPlace=false;
       }
       if(canPlace){
+        let coords=[];
         for(let i=0;i<word.length;i++){
           let r=row+dir[0]*i;
           let c=col+dir[1]*i;
           grid[r][c]=word[i];
+          coords.push([r,c]);
         }
+        placedWords.push({word, coords});
         placed=true;
       }
     }
@@ -139,37 +144,37 @@ function drawTrace(){
 }
 
 function clearSelection(){
-  for(let cell of selectedCells) cell.classList.remove('selected');
+  for(let cell of selectedCells){
+    cell.classList.remove('selected'); // hilangkan highlight sahaja
+  }
   selectedCells=[];
   ctx.clearRect(0,0,canvas.width,canvas.height);
 }
 
 confirmBtn.addEventListener('click', ()=>{
   if(selectedCells.length<2) return;
-  let word = selectedCells.map(c=>c.innerText).join('');
-  let reverseWord = word.split('').reverse().join('');
-  let foundIndex = wordList.findIndex(w=> w===word || w===reverseWord);
-  if(foundIndex!==-1){
-    for(let i=0;i<selectedCells.length;i++){
-      const cell = selectedCells[i];
-      cell.classList.remove('selected');
-      cell.classList.add('found');
-      cell.style.transition = "background 0.5s, transform 0.3s";
-      cell.style.transform = "scale(1.2)";
-      setTimeout(()=>{cell.style.transform="scale(1)";},300);
+
+  let selectedCoords = selectedCells.map(c=>[parseInt(c.dataset.row), parseInt(c.dataset.col)]);
+  let found = false;
+
+  for(let pw of placedWords){
+    let coordsStr = pw.coords.map(a=>a.join(',')).join('|');
+    let selectedStr = selectedCoords.map(a=>a.join(',')).join('|');
+    let reverseStr = pw.coords.slice().reverse().map(a=>a.join(',')).join('|');
+
+    if(selectedStr === coordsStr || selectedStr === reverseStr){
+      found = true;
+      for(let cell of selectedCells){
+        cell.classList.remove('selected');
+        cell.classList.add('found');
+      }
+      const wEl = [...document.querySelectorAll('.wordItem')].find(el=>el.dataset.word===pw.word);
+      if(wEl) wEl.classList.add('found');
+      break;
     }
-    const wEl = document.querySelectorAll('.wordItem')[foundIndex];
-    wEl.classList.add('found');
-    wEl.style.transition="color 0.5s, transform 0.3s";
-    wEl.style.transform="scale(1.2)";
-    setTimeout(()=>{wEl.style.transform="scale(1)";},300);
-  } else {
-    for(let cell of selectedCells){ 
-      cell.classList.remove('selected'); 
-      cell.classList.add('wrong'); 
-    }
-    setTimeout(()=>{ selectedCells.forEach(c=>c.classList.remove('wrong')); },300);
   }
+
+  // kalau tak jumpa, hilangkan highlight sahaja
   clearSelection();
 });
 
