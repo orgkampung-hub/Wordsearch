@@ -25,12 +25,14 @@ const themes = {
 
 let currentTheme = 'Nama Negara';
 let wordList = [];
+let usedWords = new Set(); // untuk pastikan tak ulang sesi sebelumnya
 let grid = [];
 let selectedCells = [];
 let cellElements = [];
 let placedWords = [];
 const gridSize = 13;
 const numWords = 15;
+
 const gridDiv = document.getElementById('grid');
 const wordDiv = document.getElementById('wordList');
 const confirmBtn = document.getElementById('confirmBtn');
@@ -38,7 +40,7 @@ const nextBtn = document.getElementById('nextBtn');
 const canvas = document.getElementById('traceCanvas');
 const ctx = canvas.getContext('2d');
 
-function shuffleArray(array){ return array.sort(()=> Math.random()-0.5);}
+function shuffleArray(array){ return array.sort(()=> Math.random()-0.5); }
 function resizeCanvas(){ canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; }
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
@@ -52,10 +54,12 @@ function generateGrid(){
   wordDiv.innerHTML='';
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  let bank = shuffleArray([...themes[currentTheme]]);
+  let bank = shuffleArray([...themes[currentTheme]]).filter(w=>!usedWords.has(w));
   wordList = bank.slice(0,numWords);
+  wordList.forEach(w=>usedWords.add(w));
 
   const directions = [[0,1],[1,0],[1,1],[-1,0],[0,-1],[-1,-1],[-1,1],[1,-1]];
+
   for(let word of wordList){
     let placed=false, attempts=0;
     while(!placed && attempts<100){
@@ -145,7 +149,7 @@ function drawTrace(){
 
 function clearSelection(){
   for(let cell of selectedCells){
-    cell.classList.remove('selected'); // hilangkan highlight sahaja
+    cell.classList.remove('selected');
   }
   selectedCells=[];
   ctx.clearRect(0,0,canvas.width,canvas.height);
@@ -154,15 +158,13 @@ function clearSelection(){
 confirmBtn.addEventListener('click', ()=>{
   if(selectedCells.length<2) return;
 
-  let selectedCoords = selectedCells.map(c=>[parseInt(c.dataset.row), parseInt(c.dataset.col)]);
+  let selectedCoords = selectedCells.map(c=>c.dataset.row+','+c.dataset.col);
   let found = false;
 
   for(let pw of placedWords){
-    let coordsStr = pw.coords.map(a=>a.join(',')).join('|');
-    let selectedStr = selectedCoords.map(a=>a.join(',')).join('|');
-    let reverseStr = pw.coords.slice().reverse().map(a=>a.join(',')).join('|');
-
-    if(selectedStr === coordsStr || selectedStr === reverseStr){
+    let wordCoords = pw.coords.map(a=>a.join(','));
+    // check all coordinates exist in selectedCoords (order doesn’t matter)
+    if(wordCoords.every(coord => selectedCoords.includes(coord))){
       found = true;
       for(let cell of selectedCells){
         cell.classList.remove('selected');
@@ -174,8 +176,7 @@ confirmBtn.addEventListener('click', ()=>{
     }
   }
 
-  // kalau tak jumpa, hilangkan highlight sahaja
-  clearSelection();
+  clearSelection(); // kalau tak jumpa, hilangkan highlight sahaja
 });
 
 nextBtn.addEventListener('click', ()=>{ generateGrid(); });
