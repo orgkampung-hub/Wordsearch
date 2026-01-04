@@ -1,37 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Word Search Game - Benua</title>
-  <link rel="stylesheet" href="word.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Word Search Game</title>
+<link rel="stylesheet" href="word.css">
 </head>
 <body>
-  <h1>Word Search Game</h1>
+<h1>Word Search Game</h1>
 
-  <div id="themeSelector">
-    <label for="theme">Pilih Benua:</label>
-    <select id="theme">
-      <option value="Asia">Asia</option>
-      <option value="Europe">Europe</option>
-      <option value="Africa">Africa</option>
-      <option value="Americas">Americas</option>
-      <option value="Oceania">Oceania</option>
-    </select>
-  </div>
+<div id="controls">
+  <label for="theme">Pilih Benua:</label>
+  <select id="theme">
+    <option value="Asia">Asia</option>
+    <option value="Europe">Europe</option>
+    <option value="Africa">Africa</option>
+    <option value="Americas">Americas</option>
+    <option value="Oceania">Oceania</option>
+  </select>
+  <button id="hintBtn">Hint</button>
+  <button id="nextBtn">Next Grid</button>
+</div>
 
-  <div id="gameWrapper">
-    <canvas id="traceCanvas"></canvas>
-    <div id="grid"></div>
-  </div>
+<div id="scoreDisplay">Score: 0</div>
 
-  <div id="buttonsWrapper">
-    <button id="confirmBtn">Confirm</button>
-    <button id="nextBtn">Next Grid</button>
-  </div>
+<div id="gridWrapper">
+  <div id="grid"></div>
+  <canvas id="traceCanvas"></canvas>
+</div>
 
-  <div id="wordList"></div>
+<div id="wordList"></div>
 
-  <script src="word.js"></script>
+<script src="word.js"></script>
 </body>
 </html>
