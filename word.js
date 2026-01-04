@@ -1,152 +1,206 @@
-const themes = {
-  'Asia': ["AFGHANISTAN","ARMENIA","AZERBAIJAN","BAHRAIN","BANGLADESH","BHUTAN","BRUNEI","CAMBODIA","CHINA","GEORGIA","INDIA","INDONESIA","IRAN","IRAQ","ISRAEL","JAPAN","JORDAN","KAZAKHSTAN","KUWAIT","KYRGYZSTAN","LAOS","LEBANON","MALAYSIA","MALDIVES","MONGOLIA","MYANMAR","NEPAL","NORTH KOREA","OMAN","PAKISTAN","PALESTINE","PHILIPPINES","QATAR","SAUDI ARABIA","SINGAPORE","SOUTH KOREA","SRI LANKA","SYRIA","TAIWAN","TAJIKISTAN","THAILAND","TIMOR-LESTE","TURKMENISTAN","UAE","UZBEKISTAN","VIETNAM","YEMEN"],
-  'Europe': ["ALBANIA","ANDORRA","AUSTRIA","BELARUS","BELGIUM","BOSNIA AND HERZEGOVINA","BULGARIA","CROATIA","CYPRUS","CZECHIA","DENMARK","ESTONIA","FINLAND","FRANCE","GERMANY","GREECE","HUNGARY","ICELAND","IRELAND","ITALY","KOSOVO","LATVIA","LIECHTENSTEIN","LITHUANIA","LUXEMBOURG","MALTA","MOLDOVA","MONACO","MONTENEGRO","NETHERLANDS","NORTH MACEDONIA","NORWAY","POLAND","PORTUGAL","ROMANIA","RUSSIA","SAN MARINO","SERBIA","SLOVAKIA","SLOVENIA","SPAIN","SWEDEN","SWITZERLAND","UK","VATICAN CITY"],
-  'Africa': ["ALGERIA","ANGOLA","BENIN","BOTSWANA","BURKINA FASO","BURUNDI","CABO VERDE","CAMEROON","CENTRAL AFRICAN REPUBLIC","CHAD","COMOROS","CONGO","DJIBOUTI","EGYPT","EQUATORIAL GUINEA","ERITREA","ESWATINI","ETHIOPIA","GABON","GAMBIA","GHANA","GUINEA","GUINEA-BISSAU","IVORY COAST","KENYA","LESOTHO","LIBERIA","LIBYA","MADAGASCAR","MALAWI","MALI","MAURITANIA","MAURITIUS","MOROCCO","MOZAMBIQUE","NAMIBIA","NIGER","NIGERIA","RWANDA","SAO TOME AND PRINCIPE","SENEGAL","SEYCHELLES","SIERRA LEONE","SOMALIA","SOUTH AFRICA","SOUTH SUDAN","SUDAN","TANZANIA","TOGO","TUNISIA","UGANDA","ZAMBIA","ZIMBABWE"],
-  'Americas': ["ANTIGUA AND BARBUDA","ARGENTINA","BAHAMAS","BARBADOS","BELIZE","BOLIVIA","BRAZIL","CANADA","CHILE","COLOMBIA","COSTA RICA","CUBA","DOMINICA","DOMINICAN REPUBLIC","ECUADOR","EL SALVADOR","GRENADA","GUATEMALA","GUYANA","HAITI","HONDURAS","JAMAICA","MEXICO","NICARAGUA","PANAMA","PARAGUAY","PERU","SAINT KITTS AND NEVIS","SAINT LUCIA","SAINT VINCENT AND THE GRENADINES","SURINAME","TRINIDAD AND TOBAGO","USA","URUGUAY","VENEZUELA"],
-  'Oceania': ["AUSTRALIA","FIJI","KIRIBATI","MARSHALL ISLANDS","MICRONESIA","NAURU","NEW ZEALAND","PALAU","PAPUA NEW GUINEA","SAMOA","SOLOMON ISLANDS","TONGA","TUVALU","VANUATU"]
+const gridSize=13;
+const wordsPerGame=15;
+let grid=[],cells=[],selected=[],placedWords=[];
+let snapDir=null,score=0;
+
+const continents={
+Asia:[
+"MALAYSIA","INDONESIA","THAILAND","VIETNAM","CAMBODIA","LAOS","MYANMAR","PHILIPPINES","JAPAN","CHINA",
+"INDIA","PAKISTAN","IRAN","IRAQ","SAUDI","QATAR","UAE","OMAN","YEMEN","JORDAN",
+"NEPAL","BHUTAN","SRI LANKA","BANGLADESH","MONGOLIA","SOUTH KOREA","NORTH KOREA","SINGAPORE","BRUNEI","TAIWAN"
+],
+Europe:[
+"FRANCE","GERMANY","ITALY","SPAIN","PORTUGAL","NORWAY","SWEDEN","FINLAND","POLAND","UK",
+"IRELAND","DENMARK","NETHERLANDS","BELGIUM","AUSTRIA","SWITZERLAND","GREECE","HUNGARY","CZECH","SLOVAKIA",
+"ROMANIA","BULGARIA","SERBIA","CROATIA","SLOVENIA","LITHUANIA","LATVIA","ESTONIA","ICELAND","MALTA"
+],
+Africa:[
+"EGYPT","NIGERIA","KENYA","GHANA","MOROCCO","TUNISIA","ALGERIA","SUDAN","ETHIOPIA","SENEGAL",
+"UGANDA","TANZANIA","ZAMBIA","ZIMBABWE","BOTSWANA","NAMIBIA","LIBYA","MALI","MAURITANIA","BURKINA FASO",
+"CAMEROON","IVORY COAST","NIGER","CHAD","SOUTH AFRICA","CONGO","DEMOCRATIC REPUBLIC OF CONGO","ANGOLA","SOMALIA","GABON"
+],
+Americas:[
+"USA","CANADA","MEXICO","BRAZIL","ARGENTINA","CHILE","PERU","COLOMBIA","CUBA","PANAMA",
+"VENEZUELA","ECUADOR","BOLIVIA","PARAGUAY","URUGUAY","JAMAICA","HAITI","DOMINICAN REPUBLIC","GUATEMALA","HONDURAS",
+"COSTA RICA","NICARAGUA","EL SALVADOR","BAHAMAS","TRINIDAD AND TOBAGO","BARBADOS","SURINAME","GUYANA","BELIZE","BARBADOS"
+],
+Oceania:[
+"AUSTRALIA","NEW ZEALAND","FIJI","SAMOA","TONGA","PAPUA NEW GUINEA","VANUATU","SOLOMON ISLANDS","MICRONESIA","PALAU",
+"KIRIBATI","MARSHALL ISLANDS","NAURU","TUVALU","NEW CALEDONIA","FRENCH POLYNESIA","GUAM","NORTHERN MARIANA ISLANDS","COOK ISLANDS","NIUE",
+"AMERICAN SAMOA","TOKELAU","WAKE ISLAND","NORFOLK ISLAND","PITCAIRN ISLAND","VANUATU","FIJI","TONGA","SAMOA","FIJI"
+]
 };
 
-let currentTheme = document.getElementById('theme').value;
-let wordList = [], usedWords = new Set(), grid=[], selectedCells=[], cellElements=[], placedWords=[];
-const gridSize=13, numWords=15;
+// ======== DOM ========
+const gridEl=document.getElementById("grid");
+const listEl=document.getElementById("wordList");
+const scoreEl=document.getElementById("score");
+const canvas=document.getElementById("traceCanvas");
+const ctx=canvas.getContext("2d");
+const hintBtn=document.getElementById("hintBtn");
 
-const gridDiv=document.getElementById('grid');
-const wordDiv=document.getElementById('wordList');
-const nextBtn=document.getElementById('nextBtn');
-const hintBtn=document.getElementById('hintBtn');
-const canvas=document.getElementById('traceCanvas');
-const ctx=canvas.getContext('2d');
-const scoreDisplay=document.getElementById('scoreDisplay');
-let score=0;
+// ======== UTILS ========
+function resize(){
+  const r=gridEl.getBoundingClientRect();
+  canvas.width=r.width;
+  canvas.height=r.height;
+}
+window.addEventListener("resize",resize);
+function rand(a){return a[Math.floor(Math.random()*a.length)]}
 
-function shuffleArray(array){return array.sort(()=>Math.random()-0.5);}
-function resizeCanvas(){const rect=gridDiv.getBoundingClientRect();canvas.width=rect.width;canvas.height=rect.height;}
-window.addEventListener('resize',resizeCanvas);resizeCanvas();
+// ======== GENERATE GRID ========
+function generate(){
+  grid=Array.from({length:gridSize},()=>Array(gridSize).fill(""));
+  cells=[];selected=[];placedWords=[];snapDir=null;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  gridEl.innerHTML="";listEl.innerHTML="";
+  score=0;scoreEl.textContent="Score: 0";
+  hintBtn.classList.remove("hintActive");
 
-document.getElementById('theme').addEventListener('change',()=>{currentTheme=document.getElementById('theme').value;generateGrid();});
-function updateScore(change){score+=change;if(score<0)score=0;scoreDisplay.innerText='Score: '+score;}
+  const cont=document.getElementById("continent").value;
+  const bank=[...continents[cont]].sort(()=>Math.random()-0.5);
+  const words=bank.slice(0,wordsPerGame);
 
-function generateGrid(){
-  grid=Array(gridSize).fill(0).map(()=>Array(gridSize).fill(''));
-  selectedCells=[]; cellElements=[]; placedWords=[];
-  gridDiv.innerHTML=''; wordDiv.innerHTML=''; ctx.clearRect(0,0,canvas.width,canvas.height);
-  let bank=shuffleArray([...themes[currentTheme]]).filter(w=>!usedWords.has(w));
-  wordList=bank.slice(0,numWords); wordList.forEach(w=>usedWords.add(w));
+  const dirs=[[0,1],[1,0],[1,1],[0,-1],[-1,0],[-1,-1],[1,-1],[-1,1]];
 
-  const directions=[[0,1],[1,0],[1,1],[-1,0],[0,-1],[-1,-1],[-1,1],[1,-1]];
-  for(let word of wordList){
-    let placed=false, attempts=0;
-    while(!placed && attempts<100){
-      attempts++;
-      let dir=directions[Math.floor(Math.random()*directions.length)];
-      let row=Math.floor(Math.random()*gridSize);
-      let col=Math.floor(Math.random()*gridSize);
-      let canPlace=true;
-      for(let i=0;i<word.length;i++){
-        let r=row+dir[0]*i;
-        let c=col+dir[1]*i;
-        if(r<0||r>=gridSize||c<0||c>=gridSize) canPlace=false;
-        else if(grid[r][c]!='' && grid[r][c]!=word[i]) canPlace=false;
+  for(let w of words){
+    let placed=false;
+    for(let a=0;a<100&&!placed;a++){
+      let [dr,dc]=rand(dirs);
+      let r=Math.floor(Math.random()*gridSize);
+      let c=Math.floor(Math.random()*gridSize);
+      let ok=true;
+      for(let i=0;i<w.length;i++){
+        let rr=r+dr*i,cc=c+dc*i;
+        if(rr<0||cc<0||rr>=gridSize||cc>=gridSize||
+          (grid[rr][cc] && grid[rr][cc]!=w[i])) ok=false;
       }
-      if(canPlace){
+      if(ok){
         let coords=[];
-        for(let i=0;i<word.length;i++){
-          let r=row+dir[0]*i;
-          let c=col+dir[1]*i;
-          grid[r][c]=word[i]; coords.push([r,c]);
+        for(let i=0;i<w.length;i++){
+          let rr=r+dr*i,cc=c+dc*i;
+          grid[rr][cc]=w[i];coords.push([rr,cc]);
         }
-        placedWords.push({word,coords,hintCount:1}); placed=true;
+        placedWords.push({word:w,coords,hint:1});
+        placed=true;
       }
     }
   }
 
-  const letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   for(let r=0;r<gridSize;r++)
     for(let c=0;c<gridSize;c++)
-      if(grid[r][c]=='') grid[r][c]=letters[Math.floor(Math.random()*letters.length)];
+      if(!grid[r][c]) grid[r][c]=letters[Math.floor(Math.random()*26)];
 
   for(let r=0;r<gridSize;r++){
     for(let c=0;c<gridSize;c++){
-      const cell=document.createElement('div'); cell.classList.add('cell'); cell.dataset.row=r; cell.dataset.col=c;
-      cell.innerText=grid[r][c]; cell.addEventListener('click',()=>selectCell(cell));
-      gridDiv.appendChild(cell); cellElements.push(cell);
+      const d=document.createElement("div");
+      d.className="cell";
+      d.textContent=grid[r][c];
+      d.dataset.r=r;d.dataset.c=c;
+      d.onclick=()=>selectCell(d);
+      gridEl.appendChild(d);
+      cells.push(d);
     }
   }
 
-  for(let w of wordList){
-    const wEl=document.createElement('div'); wEl.classList.add('wordItem'); wEl.dataset.word=w; wEl.innerText=w; wordDiv.appendChild(wEl);
+  words.forEach(w=>{
+    const e=document.createElement("div");
+    e.className="word";e.textContent=w;e.dataset.word=w;
+    listEl.appendChild(e);
+  });
+
+  resize();
+}
+
+// ======== GAME FUNCTIONS ========
+function direction(a,b){
+  return{
+    dr:Math.sign(b.dataset.r-a.dataset.r),
+    dc:Math.sign(b.dataset.c-a.dataset.c)
+  };
+}
+
+function aligned(){
+  if(selected.length<2) return true;
+  let d=direction(selected[0],selected[1]);
+  for(let i=2;i<selected.length;i++){
+    if(
+      selected[i].dataset.r-selected[i-1].dataset.r!=d.dr||
+      selected[i].dataset.c-selected[i-1].dataset.c!=d.dc
+    ) return false;
   }
-  resizeCanvas();
+  return true;
 }
 
 function selectCell(cell){
-  if(cell.classList.contains('found')) return;
-  if(selectedCells.includes(cell)){
-    cell.classList.remove('selected');
-    selectedCells = selectedCells.filter(c=>c!==cell);
-  } else {
-    cell.classList.add('selected');
-    selectedCells.push(cell);
+  selected.push(cell);
+  if(!aligned()){
+    selected.forEach(c=>c.classList.remove("selected"));
+    selected=[cell];
   }
-  drawTrace();
-  if(selectedCells.length >= 2) checkSelectionAuto();
+  cell.classList.add("selected");
+  draw();
+  checkWord();
 }
 
-function drawTrace(){
+function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  if(selectedCells.length<1) return;
-  ctx.strokeStyle='#3498db'; ctx.lineWidth=5; ctx.lineJoin='round'; ctx.beginPath();
-  for(let i=0;i<selectedCells.length;i++){
-    const rect=selectedCells[i].getBoundingClientRect();
-    const parentRect=canvas.getBoundingClientRect();
-    const x=rect.left-parentRect.left+rect.width/2;
-    const y=rect.top-parentRect.top+rect.height/2;
-    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-  }
+  if(selected.length<2) return;
+  ctx.strokeStyle="#3498db";ctx.lineWidth=5;
+  ctx.beginPath();
+  selected.forEach((c,i)=>{
+    const r=c.getBoundingClientRect();
+    const g=gridEl.getBoundingClientRect();
+    let x=r.left-g.left+r.width/2;
+    let y=r.top-g.top+r.height/2;
+    i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+  });
   ctx.stroke();
 }
 
-function checkSelectionAuto(){
-  let selectedCoords = selectedCells.map(c=>c.dataset.row+','+c.dataset.col);
-
-  for(let pw of placedWords){
-    let wordCoords = pw.coords.map(a=>a.join(','));
-    if(wordCoords.every(c => selectedCoords.includes(c))){
-      for(let c of wordCoords){
-        const cell = cellElements.find(cl=>cl.dataset.row+','+cl.dataset.col===c);
-        cell.classList.add('found'); // mark found visually
-      }
-
-      const wEl = [...document.querySelectorAll('.wordItem')].find(el=>el.dataset.word===pw.word);
-      if(wEl && !wEl.classList.contains('found')){
-        wEl.classList.add('found'); updateScore(1);
-      }
-
-      // remove found cells from selectedCells so highlight stays for remaining
-      selectedCells = selectedCells.filter(c => !wordCoords.includes(c.dataset.row+','+c.dataset.col));
+function checkWord(){
+  let sel=selected.map(c=>c.dataset.r+","+c.dataset.c);
+  for(let p of placedWords){
+    let wc=p.coords.map(a=>a[0]+","+a[1]);
+    if(wc.every(c=>sel.includes(c))){
+      wc.forEach(k=>{
+        let c=cells.find(x=>x.dataset.r+","+x.dataset.c===k);
+        c.classList.add("found");
+      });
+      document.querySelector(`[data-word="${p.word}"]`).classList.add("found");
+      score++;scoreEl.textContent="Score: "+score;
+      selected.forEach(c=>c.classList.remove("selected"));
+      selected=[];ctx.clearRect(0,0,canvas.width,canvas.height);
+      return;
     }
   }
-  drawTrace();
 }
 
-nextBtn.addEventListener('click',()=>{ generateGrid(); });
+// ======== HINT BUTTON ========
+hintBtn.onclick = ()=>{
+  let left=placedWords.filter(p=>p.hint>0 &&
+    !document.querySelector(`[data-word="${p.word}"]`).classList.contains("found"));
+  if(!left.length) return alert("Tiada hint");
+  let p=rand(left);
+  let [r,c]=rand(p.coords);
+  let cell=cells.find(x=>x.dataset.r==r&&x.dataset.c==c);
+  cell.classList.add("hint");
+  p.hint=0;
 
-hintBtn.addEventListener('click',()=>{
-  const remaining=placedWords.filter(pw=>{
-    const wEl=[...document.querySelectorAll('.wordItem')].find(el=>el.dataset.word===pw.word);
-    return !wEl.classList.contains('found') && pw.hintCount>0;
-  });
-  if(remaining.length===0) return alert("Tiada hint tinggal!");
-  const pw=remaining[Math.floor(Math.random()*remaining.length)];
-  const availableCoords=pw.coords.filter(c=>{
-    const cell=cellElements.find(cl=>cl.dataset.row==c[0] && cl.dataset.col==c[1]);
-    return !cell.classList.contains('hint');
-  });
-  if(availableCoords.length===0) return alert("Tiada huruf tersedia untuk hint!");
-  const coord=availableCoords[Math.floor(Math.random()*availableCoords.length)];
-  const cell=cellElements.find(cl=>cl.dataset.row==coord[0] && cl.dataset.col==coord[1]);
-  cell.classList.add('hint'); pw.hintCount=0;
-  updateScore(-1);
-});
+  score--;
+  if(score<0) score=0;
+  scoreEl.textContent="Score: "+score;
 
-generateGrid();
+  // 🔥 Glow effect (safe)
+  hintBtn.classList.remove("hintActive");
+  void hintBtn.offsetWidth;
+  hintBtn.classList.add("hintActive");
+};
+
+// ======== NEXT GRID ========
+document.getElementById("nextBtn").onclick=generate;
+document.getElementById("continent").onchange=generate;
+
+// ======== INIT ========
+generate();
